@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GitHub リポジトリ検索アプリ
 
-## Getting Started
+GitHub のリポジトリを「探索・発見」できる Web アプリケーション。
 
-First, run the development server:
+## 設計思想
+
+### コンセプト: 「検索」ではなく「探索・発見」
+
+ユーザーは正確な検索クエリを知らない。「こんなの探してる」とざっくり入力して、意図に近い候補を見やすく発見できることを目指しました。
+
+### 3つの柱
+
+**1. 入力のハードルを下げる**
+- 日本語でざっくり入力 → AIが英語の検索キーワードに変換
+- 直感的なフィルタUI（種類・言語・Star数・更新時期・ライセンス・サイズ）
+- 初回アクセス時に人気トピックのサジェストタグで「押すだけ」で始められる
+
+**2. 「おすすめ感」のある結果表示**
+- AI生成の日本語概要で「これが探してたやつだ」と判断できる
+- アーカイブ・フォークをデフォルト除外し、活きたリポジトリだけ表示
+- Star数・最終更新日で質と活発さが一目でわかる
+
+**3. 詳細ページで「使えるかどうか」を判断できる**
+- AI要約でリポジトリの概要を即把握
+- READMEのAI日本語翻訳で英語リポジトリも読める
+- コミット活動チャートで活発さを可視化
+- 言語割合・ライセンスで実務利用の判断材料を提供
+
+## 工夫点
+
+### UX
+
+| 工夫 | 内容 |
+|------|------|
+| AI検索補助 | 日本語入力をAIで英語キーワードに変換。GitHub APIの英語全文検索の弱点をカバー |
+| AI概要生成 | 全リポジトリのdescriptionを日本語で統一要約。一覧の読みやすさを担保 |
+| 段階的ローディング | 詳細ページは取得できたセクションから順次表示。全部待たせない |
+| スケルトンUI | AI概要生成中はスケルトンで待たせる。差し替えのチラつきを防止 |
+| URL駆動の状態管理 | 全フィルタをsearchParamsに保持。共有可能・ブラウザバック対応 |
+| 無限スクロール | 30件ずつ取得。末尾手前で先読み発火してカクつき防止 |
+| AIフォールバック | AI障害時は元のdescription/READMEをそのまま表示。検索自体は止めない |
+
+### 技術
+
+| 工夫 | 内容 |
+|------|------|
+| API Route によるProxy | GitHub Token・Claude API Keyをクライアントに露出させない |
+| クエリビルダーの分離 | フィルタ値→GitHub qクエリ文字列の変換をdomain層に純ロジックとして切り出し。テストしやすい |
+| 責務に応じたディレクトリ設計 | app（薄く）/ components / domain / server / hooks / types / config に分離 |
+| MSWによるAPIモック | テスト・開発両方で使い回し |
+
+## AIツールの使用について
+
+### 開発時の使用
+
+本プロジェクトの開発にあたり、Claude Code（Anthropic CLI）を使用しています。
+コード生成、設計相談、デバッグ等に活用しました。
+
+### アプリケーション内での使用
+
+検索キーワードの英語変換、リポジトリ概要の日本語生成、READMEの日本語翻訳に Claude API（claude-haiku）を使用しています。
+
+GitHub API はリポジトリ名・README・description 等の英語テキストに対する全文検索で動作するため、日本語でざっくり入力された検索意図を英語の検索キーワードに変換することで、検索精度を向上させています。
+
+**設計判断の背景：**
+
+当初は AI にリポジトリのおすすめ候補を直接抽出・提案させるアプローチも検討しました。しかし、本課題は GitHub API を活用した検索アプリケーションの実装力を評価するものと理解しており、検索・表示のロジック自体を AI に委ねてしまうと、課題の趣旨から外れると判断しました。
+
+そのため、AI の役割は「ユーザーの入力を検索に適した英語キーワードに変換する」「検索結果の概要を日本語で生成する」「READMEを日本語に翻訳する」という補助に限定し、検索・フィルタリング・表示のロジックはすべて自前で実装しています。
+
+## 技術スタック
+
+| 用途 | ライブラリ |
+|------|-----------|
+| フレームワーク | Next.js 16 (App Router) |
+| 言語 | TypeScript |
+| CSS | Tailwind CSS 4 |
+| UIコンポーネント | shadcn/ui |
+| チャート | shadcn Charts (Recharts) |
+| マークダウン | react-markdown + rehype-highlight + remark-gfm |
+| AI | @anthropic-ai/sdk |
+| テスト | Vitest + React Testing Library + Playwright + MSW |
+| ユーティリティ | date-fns / react-intersection-observer / Zod |
+
+## セットアップ
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 で起動します。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 環境変数
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+GITHUB_TOKEN=         # GitHub Personal Access Token
+ANTHROPIC_API_KEY=    # Anthropic API Key
+```
