@@ -4,7 +4,9 @@ import {
   JetBrains_Mono,
   Zen_Kaku_Gothic_New,
 } from "next/font/google";
-import { Github } from "lucide-react";
+import Link from "next/link";
+import { GitHubIcon } from "./components/icons/github-icon";
+import { MAX_WIDTH_CLASS } from "@/lib/constants";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -46,14 +48,18 @@ export default function RootLayout({
           <div className="absolute bottom-0 right-1/4 h-[300px] w-[300px] rounded-full bg-emerald-500/10 blur-[100px]" />
         </div>
         <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-4xl items-center gap-2.5 px-6 py-3.5">
-            <Github className="h-5 w-5" />
-            <a href="/" className="text-base font-semibold tracking-tight">
+          <div
+            className={`mx-auto flex items-center gap-2.5 px-6 py-3.5 ${MAX_WIDTH_CLASS}`}
+          >
+            <GitHubIcon className="h-7 w-7" />
+            <Link href="/" className="text-base font-semibold tracking-tight">
               Repo Finder
-            </a>
+            </Link>
           </div>
         </header>
-        <main className="mx-auto max-w-[95%] px-6 py-8">{children}</main>
+        <main className={`mx-auto px-6 py-8 ${MAX_WIDTH_CLASS}`}>
+          {children}
+        </main>
       </body>
     </html>
   );

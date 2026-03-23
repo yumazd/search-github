@@ -174,16 +174,39 @@ GET /search/repositories?q=react+form+library+language:typescript+stars:>=100+pu
 | コミット活動 | `GET /repos/{owner}/{repo}/stats/commit_activity` | shadcn Charts |
 | README | `GET /repos/{owner}/{repo}/readme` | マークダウン→HTMLレンダリング + AI日本語翻訳。コードブロックは翻訳しない |
 
+### READMEレンダリングの工夫
+
+- `react-markdown` + `remark-gfm`（GFMテーブル・チェックボックス等対応）
+- `rehype-raw`：GitHub READMEに混在するHTMLタグ（`<p align="center">`、`<img>`、`<table>` 等）をそのままレンダリング。`react-markdown` はデフォルトでHTMLを文字列表示するため必須
+- `@tailwindcss/typography`（`prose`クラス）：見出し・リスト・コードブロック・テーブル等の整形に使用
+
+### Server Component / Client Component 分離
+
+詳細ページはServer Component + Client Componentのハイブリッド構成。
+
+- **Server Component（page.tsx）**: GitHub APIデータ（基本情報・言語・コミット活動）をサーバーサイドで取得。`next: { revalidate: 3600 }` で1時間キャッシュし、リロード時にAPIを再実行しない
+- **Client Component（AiSummary, ReadmeViewer）**: AI要約・README翻訳のみクライアントで非同期取得。時間がかかるAI処理だけスケルトン → 表示の段階的ローディング
+
+```
+Server Component（page.tsx）
+  ├─ fetch repo info       ← サーバーキャッシュ（revalidate: 3600）
+  ├─ fetch languages        ← 同上
+  ├─ fetch commit activity  ← 同上
+  └─ render
+      ├─ 基本情報・言語バー・コミットチャート（即表示）
+      ├─ <AiSummary />      ← Client Component
+      └─ <ReadmeViewer />   ← Client Component
+```
+
 ### 段階的ローディング
 
-| 順序 | セクション | タイミング |
-|------|-----------|-----------|
-| ① | 基本情報・トピック・外部リンク | 〜1秒 |
-| ② | AI要約・言語割合バー | 〜2秒 |
-| ③ | コミット活動チャート | 〜3秒 |
-| ④ | README（AI翻訳済み） | 〜3-5秒 |
+| 順序 | セクション | タイミング | レンダリング |
+|------|-----------|-----------|-------------|
+| ① | 基本情報・トピック・外部リンク・言語バー・コミット活動 | 即時 | Server Component（キャッシュ済み） |
+| ② | AI要約 | 〜2秒 | Client Component |
+| ③ | README（AI翻訳済み） | 〜3-5秒 | Client Component |
 
-各セクションが準備できるまでそこだけスケルトン、準備できたら表示。
+AI部分のみスケルトン表示、準備できたら差し替え。
 
 ---
 
