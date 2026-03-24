@@ -12,14 +12,10 @@
 
 ### フィルタ
 
-| フィルタ | 選択肢 | APIクエリ変換 | 選択肢の取得元 |
-|---------|--------|--------------|---------------|
-| 種類 | 全て / ライブラリ / テンプレート / サンプル / ボイラープレート | キーワード付加。「テンプレート」のみ `template:true` 併用可 | 固定値 |
-| 言語 | 全て / TypeScript / JavaScript / Python / Go / Rust / Java / Ruby / Swift / PHP / C++ | `language:typescript` 等 | 固定値 |
-| 最低Star数 | なし / 50+ / 100+ / 500+ | `stars:>=50` 等 | 固定値 |
-| 更新時期 | いつでも / 1ヶ月以内 / 半年以内 / 1年以内 | `pushed:>YYYY-MM-DD`（現在日から算出） | 固定値 |
-| ライセンス | 指定なし / MIT / Apache-2.0 / GPL-3.0 / BSD-2-Clause / BSD-3-Clause | `license:mit` 等 | API取得可能（`GET /licenses`）だが固定値でも十分 |
-| リポジトリサイズ | 指定なし / 小（<1MB） / 中（1-10MB） / 大（10MB+） | `size:<1000` / `size:1000..10000` / `size:>10000` | 固定値 |
+| フィルタ | 選択肢 | APIクエリ変換 |
+|---------|--------|--------------|
+| 最低Star数 | なし / 50+ / 100+ / 500+ | `stars:>=50` 等 |
+| 更新時期 | いつでも / 1ヶ月以内 / 半年以内 / 1年以内 | `pushed:>YYYY-MM-DD`（現在日から算出） |
 
 ### 並べ替え
 
@@ -37,12 +33,24 @@
 | アーカイブ除外 | `archived:false` | 放置リポジトリ除外 |
 | フォーク除外 | `fork:false` | オリジナルのみ表示 |
 
+### 検討したが見送ったフィルタ
+
+以下のフィルタは設計・実装を検討したが、期間内の優先度を考慮し機能を絞った。コア体験（キーワード検索→結果一覧→詳細閲覧）の品質を優先するため。
+
+| フィルタ | 概要 | 見送り理由 |
+|---------|------|-----------|
+| 種類 | ライブラリ / テンプレート / サンプル / ボイラープレート | GitHub APIにカテゴリの概念がなく、キーワード付加による疑似フィルタになるため精度が低い |
+| 言語 | TypeScript / Python / Go 等 | `language:` クエリで実装可能だが、フィルタUIの複雑化に対して利用頻度が限定的 |
+| ライセンス | MIT / Apache-2.0 / GPL-3.0 等 | `license:` クエリで実装可能だが、一般ユーザーがライセンスで絞り込む頻度は低い |
+| リポジトリサイズ | 小 / 中 / 大 | `size:` クエリで実装可能だが、サイズの基準がユーザーにとって直感的でない |
+| サジェストタグ | 人気トピックのワンクリック検索 | 検索体験の補助として有効だが、固定値のため鮮度が保てない。トレンドAPI連携が理想 |
+
 ### GitHub Search API のクエリ構造
 
 全フィルタ条件は `q` パラメータの1つの文字列に結合される。`sort` と `order` のみ別パラメータ。
 
 ```
-GET /search/repositories?q=react+form+library+language:typescript+stars:>=100+pushed:>2026-02-16+license:mit+archived:false+fork:false&sort=stars&order=desc
+GET /search/repositories?q=react+form+stars:>=100+pushed:>2026-02-16+archived:false+fork:false&sort=stars&order=desc
 ```
 
 ### 状態管理
@@ -50,7 +58,7 @@ GET /search/repositories?q=react+form+library+language:typescript+stars:>=100+pu
 全フィルタをURL searchParamsに保持：
 
 ```
-/?q=react+form&type=library&lang=typescript&sort=stars&stars=100&pushed=1m&license=mit&size=small
+/result?q=react+form&sort=stars&stars=100&pushed=1m
 ```
 
 ---
@@ -74,22 +82,6 @@ GET /search/repositories?q=react+form+library+language:typescript+stars:>=100+pu
 | 最終更新日 | `updated_at` | 相対表示（「3日前」等） |
 | トピックタグ | `topics` | 最大5個 |
 
-### レイアウト
-
-```
-┌──────────────────────────────────────────────────┐
-│ [👤]  owner/repository-name              ⭐ 1.2k │
-│                                                  │
-│  Reactのフォームバリデーションを簡潔に書ける      │
-│  ライブラリ。TypeScript完全対応...                │
-│                                                  │
-│  🟡 TypeScript   🍴 234   👁 89   ⚠ 12          │
-│  MIT   Updated 3 days ago                        │
-│                                                  │
-│  [react] [forms] [validation] [typescript] [ui]  │
-└──────────────────────────────────────────────────┘
-```
-
 ### 仕様
 
 - カード全体がリンク（詳細ページへ遷移）
@@ -103,7 +95,6 @@ GET /search/repositories?q=react+form+library+language:typescript+stars:>=100+pu
 - 日本語 → 要約（1〜2行に整形）
 - descriptionなし → リポジトリ名とトピックから概要生成
 - GitHub APIから30件取得後、まとめて1回のAI呼び出し
-- 概要生成完了までスケルトン表示（差し替えはしない）
 
 ### 無限スクロール
 
@@ -121,92 +112,49 @@ GET /search/repositories?q=react+form+library+language:typescript+stars:>=100+pu
 
 ## 詳細ページ
 
-### レイアウト
-
-```
-┌──────────────────────────────────────────────────┐
-│ [← 検索結果に戻る]                               │
-│                                                  │
-│ [👤]  owner / repository-name                    │
-│                                                  │
-│ ┌─ AI要約 ────────────────────────────────────┐  │
-│ │ Reactのフォームバリデーションを簡潔に書ける  │  │
-│ │ ライブラリ。TypeScript完全対応。Zodや...     │  │
-│ └─────────────────────────────────────────────┘  │
-│                                                  │
-│  ⭐ 1.2k  🍴 234  👁 89  ⚠ 12                   │
-│  🟡 TypeScript   MIT   Created 2023-04-01        │
-│                                                  │
-│  [react] [forms] [validation] [typescript]       │
-│  [hooks] [form-library] [zod]                    │
-│                                                  │
-│  [🔗 GitHubで見る]  [🌐 Demo Site]               │
-├──────────────────────────────────────────────────┤
-│  Languages                                       │
-│  ██████████████████░░░░░░ TS 78%  JS 18%  CSS 4% │
-├──────────────────────────────────────────────────┤
-│  Commit Activity (past year)                     │
-│  ▁▂▃▅▇█▇▅▃▂▁▁▂▃▅▇███▇▅▃▂▁▂▃▅▇█▇▅▃▂▁          │
-│  Jan     Apr     Jul     Oct     Jan             │
-├──────────────────────────────────────────────────┤
-│                                                  │
-│  README.md（AI日本語翻訳）                        │
-│  ─────────────────────────────────────           │
-│  # React Form Validator                          │
-│  軽量なフォームバリデーションライブラリ...         │
-│  ...                                             │
-│  ```tsx                                          │
-│  const { register } = useForm()  ← コードはそのまま│
-│  ```                                             │
-│                                                  │
-└──────────────────────────────────────────────────┘
-```
-
 ### 各セクションの仕様
 
 | セクション | 取得元 | 備考 |
 |-----------|--------|------|
-| 基本情報 | `GET /repos/{owner}/{repo}` | 1リクエスト |
-| AI要約 | description + トピックをAIに投げて生成 | |
+| 基本情報 | `GET /repos/{owner}/{repo}` | Server Componentでサーバー取得 |
+| AI要約 | description + トピックをAIに投げて生成 | Server Component（Suspenseでストリーミング） |
 | トピックタグ | 同上 | 全件表示（一覧は5個制限） |
 | 外部リンク | `html_url`, `homepage` | homepageがなければボタン非表示 |
-| 言語割合バー | `GET /repos/{owner}/{repo}/languages` | CSS自作 |
-| コミット活動 | `GET /repos/{owner}/{repo}/stats/commit_activity` | shadcn Charts |
-| README | `GET /repos/{owner}/{repo}/readme` | マークダウン→HTMLレンダリング + AI日本語翻訳。コードブロックは翻訳しない |
+| 言語割合バー | `GET /repos/{owner}/{repo}/languages` | Server Componentでサーバー取得 |
+| コミット活動 | `GET /repos/{owner}/{repo}/stats/commit_activity` | Server Component + Client描画 |
+| README | `GET /repos/{owner}/{repo}/readme` | Server Componentで取得、AI翻訳のみClient |
 
 ### READMEレンダリングの工夫
 
 - `react-markdown` + `remark-gfm`（GFMテーブル・チェックボックス等対応）
-- `rehype-raw`：GitHub READMEに混在するHTMLタグ（`<p align="center">`、`<img>`、`<table>` 等）をそのままレンダリング。`react-markdown` はデフォルトでHTMLを文字列表示するため必須
+- `rehype-raw`：GitHub READMEに混在するHTMLタグ（`<p align="center">`、`<img>`、`<table>` 等）をそのままレンダリング
 - `@tailwindcss/typography`（`prose`クラス）：見出し・リスト・コードブロック・テーブル等の整形に使用
 
 ### Server Component / Client Component 分離
 
-詳細ページはServer Component + Client Componentのハイブリッド構成。
-
-- **Server Component（page.tsx）**: GitHub APIデータ（基本情報・言語・コミット活動）をサーバーサイドで取得。`next: { revalidate: 3600 }` で1時間キャッシュし、リロード時にAPIを再実行しない
-- **Client Component（AiSummary, ReadmeViewer）**: AI要約・README翻訳のみクライアントで非同期取得。時間がかかるAI処理だけスケルトン → 表示の段階的ローディング
+詳細ページはServer Component中心の構成。データ取得はすべてサーバーサイドで行い、インタラクティブな部分のみClient Componentに分離。
 
 ```
 Server Component（page.tsx）
-  ├─ fetch repo info       ← サーバーキャッシュ（revalidate: 3600）
-  ├─ fetch languages        ← 同上
-  ├─ fetch commit activity  ← 同上
+  ├─ getRepository()       ← サーバー取得（revalidate: 3600）
+  ├─ getLanguages()        ← 同上
   └─ render
-      ├─ 基本情報・言語バー・コミットチャート（即表示）
-      ├─ <AiSummary />      ← Client Component
-      └─ <ReadmeViewer />   ← Client Component
+      ├─ 基本情報・言語バー（即表示）
+      ├─ <Suspense> → <AiSummary />       ← Server Component（AI処理）
+      ├─ <Suspense> → <CommitChart />      ← Server取得 + Client描画
+      └─ <Suspense> → <ReadmeViewer />     ← Server取得 + Client翻訳
 ```
 
-### 段階的ローディング
+### 段階的ローディング（Suspense Streaming）
 
-| 順序 | セクション | タイミング | レンダリング |
-|------|-----------|-----------|-------------|
-| ① | 基本情報・トピック・外部リンク・言語バー・コミット活動 | 即時 | Server Component（キャッシュ済み） |
-| ② | AI要約 | 〜2秒 | Client Component |
-| ③ | README（AI翻訳済み） | 〜3-5秒 | Client Component |
+Suspense境界で各セクションを包み、準備できたものから順にストリーミング表示。
 
-AI部分のみスケルトン表示、準備できたら差し替え。
+| 順序 | セクション | レンダリング |
+|------|-----------|-------------|
+| ① | 基本情報・トピック・外部リンク・言語バー | Server Component（即表示） |
+| ② | AI要約 | Server Component（Suspense） |
+| ③ | コミット活動 | Server Component取得 → Client描画（Suspense） |
+| ④ | README（AI翻訳） | Server Component取得 → Client翻訳（Suspense） |
 
 ---
 
@@ -214,67 +162,22 @@ AI部分のみスケルトン表示、準備できたら差し替え。
 
 ### ルート
 
-| パス | 内容 |
-|------|------|
-| `/` | 検索トップ（検索フォーム + 一覧） |
-| `/repositories/[owner]/[repo]` | リポジトリ詳細 |
-| `/api/search` | GitHub検索Proxy（Token隠蔽） |
-| `/api/translate` | AI翻訳・要約Proxy（API Key隠蔽） |
+| パス | 内容 | レンダリング |
+|------|------|-------------|
+| `/` | 検索トップ | Static |
+| `/result` | 検索結果一覧 | Dynamic（searchParamsで検索実行） |
+| `/repositories/[owner]/[repo]` | リポジトリ詳細 | Dynamic（revalidate: 3600） |
+| `/api/search` | 検索API（無限スクロール2ページ目以降用） | API Route |
+| `/api/translate` | AI翻訳API（README翻訳用） | API Route |
+| `/api/github-proxy` | GitHub APIプロキシ（ホワイトリスト制限付き） | API Route |
 
-### ディレクトリ構成
+### App Router 規約ファイル
 
-```
-src/
-  app/
-    layout.tsx
-    page.tsx
-    loading.tsx
-    error.tsx
-    not-found.tsx
-    api/
-      search/route.ts
-      translate/route.ts
-    repositories/
-      [owner]/
-        [repo]/
-          page.tsx
-          loading.tsx
-          error.tsx
-
-  components/
-    search-form.tsx
-    repository-card.tsx
-    repository-list.tsx
-    repository-header.tsx
-    ai-summary.tsx
-    language-bar.tsx
-    commit-chart.tsx
-    readme-viewer.tsx
-    skeleton.tsx
-
-  domain/
-    query-builder.ts
-    search-params.ts
-
-  server/
-    github.ts
-    ai.ts
-
-  hooks/
-    use-search.ts
-
-  lib/
-    date.ts
-    format.ts
-
-  types/
-    repository.ts
-    search.ts
-
-  config/
-    filters.ts
-    github.ts
-```
+| ファイル | 配置 |
+|---------|------|
+| `loading.tsx` | `/result`, `/repositories/[owner]/[repo]` |
+| `error.tsx` | `/result`, `/repositories/[owner]/[repo]` |
+| `not-found.tsx` | `/repositories/[owner]/[repo]` |
 
 ---
 
@@ -285,29 +188,28 @@ src/
 | 画面 | 表示 |
 |------|------|
 | 検索トップ初回 | なし（フォームだけ即表示） |
-| 検索実行中 | カードのスケルトン × 6枚程度 |
+| 検索実行中 | loading.tsx によるスケルトン |
 | 無限スクロール追加読み込み | リスト末尾にスピナー + スケルトン × 3枚程度 |
-| 詳細ページ | セクションごとにスケルトン（段階的表示） |
+| 詳細ページ | loading.tsx + Suspenseによる段階的表示 |
 
 ### エラー
 
 | エラー種別 | 原因 | 表示 |
 |-----------|------|------|
 | GitHub API 422 | 不正なクエリ | 「検索条件を変えて再度お試しください」 |
-| GitHub API 403 | レート制限超過 | 「しばらく待ってから再度お試しください」+ リセット時刻表示 |
-| GitHub API 5xx | GitHub障害 | 「GitHubに接続できません。時間をおいてお試しください」 |
+| GitHub API 403 | レート制限超過 | 「しばらく待ってから再度お試しください」 |
+| GitHub API 5xx | GitHub障害 | error.tsx（リトライボタン付き） |
 | Claude API エラー | AI障害 | フォールバック: 元のdescription/READMEをそのまま表示 |
-| ネットワークエラー | オフライン等 | 「ネットワーク接続を確認してください」 |
 | 詳細ページ 404 | リポジトリ不在 | not-found.tsx |
 
 ### 空状態
 
 | 状態 | 表示 |
 |------|------|
-| 初回アクセス（未検索） | フォームのみ + 検索履歴のサジェストタグ |
+| 初回アクセス（未検索） | フォームのみ |
 | 検索結果0件 | 「該当するリポジトリが見つかりませんでした」+ フィルタ緩和の提案 |
 | 無限スクロール末尾 | 「すべての結果を表示しました」 |
-| descriptionなし | AI概要で補う。失敗なら「概要なし」 |
+| descriptionなし | AI概要で補う。失敗なら「説明がありません」 |
 
 ---
 
@@ -326,7 +228,6 @@ src/
 | 用途 | ライブラリ |
 |------|-----------|
 | UIコンポーネント | shadcn/ui |
-| チャート | shadcn Charts (Recharts) — コミット活動チャート用 |
 | 言語割合バー | CSS自作 |
 
 ### コンテンツ
@@ -334,8 +235,9 @@ src/
 | 用途 | ライブラリ |
 |------|-----------|
 | マークダウンレンダリング | react-markdown |
-| シンタックスハイライト | rehype-highlight |
 | GFM対応 | remark-gfm |
+| HTML許可 | rehype-raw |
+| タイポグラフィ | @tailwindcss/typography |
 
 ### AI
 
@@ -343,20 +245,10 @@ src/
 |------|-----------|
 | Claude API | @anthropic-ai/sdk |
 
-### テスト
-
-| 用途 | ライブラリ |
-|------|-----------|
-| テストランナー | Vitest |
-| コンポーネントテスト | React Testing Library |
-| E2Eテスト | Playwright |
-| APIモック | MSW |
-
 ### ユーティリティ
 
 | 用途 | ライブラリ |
 |------|-----------|
-| 日付処理 | date-fns |
 | 無限スクロール | react-intersection-observer |
 | バリデーション | Zod |
 
@@ -366,11 +258,35 @@ src/
 
 ### 画像の最適化
 
-オーナーアイコン（`avatar_url`）は一覧・詳細の両方で表示される。Next.js の `next/image` を使用して最適化する。
+オーナーアイコン（`avatar_url`）は一覧・詳細の両方で表示される。Next.js の `next/image` を使用して最適化。
 
 | 対応 | 内容 |
 |------|------|
 | `next/image` 使用 | 自動的に WebP/AVIF 変換、リサイズ、lazy loading |
-| `sizes` 指定 | 一覧カード: 40px、詳細ページ: 64px 程度。不要に大きい画像を取得しない |
 | `remotePatterns` 設定 | `next.config.ts` に `avatars.githubusercontent.com` を許可 |
-| `priority` | ファーストビューに入るカード（最初の数枚）のみ `priority={true}` で即読み込み |
+
+### fetchキャッシュ
+
+| 対象 | revalidate |
+|------|-----------|
+| 検索結果 | 60秒 |
+| リポジトリ詳細・言語・コミット活動・README | 3600秒（1時間） |
+
+### メタデータ
+
+| ページ | 内容 |
+|--------|------|
+| ルートレイアウト | `metadataBase` 設定、`title.template` でサイト名自動付与 |
+| 検索結果 | 検索キーワードを含む動的title/description |
+| 詳細ページ | リポジトリ名・description・OGP画像を `generateMetadata` で動的生成 |
+
+---
+
+## セキュリティ
+
+| 対策 | 内容 |
+|------|------|
+| GitHub Proxyホワイトリスト | `/api/github-proxy` は許可パスのみ通過（readme, languages, commit_activity） |
+| エラーメッセージ秘匿 | サーバーエラーの詳細をクライアントに返さず、汎用メッセージを表示 |
+| AI機能のデフォルト無効 | `AI_ENABLED=true` を明示的に設定しない限りAI機能は無効 |
+| 環境変数管理 | `.env.example` で必要な変数を明示、`.env.local` は `.gitignore` で除外 |

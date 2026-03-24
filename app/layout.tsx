@@ -4,9 +4,7 @@ import {
   JetBrains_Mono,
   Zen_Kaku_Gothic_New,
 } from "next/font/google";
-import Link from "next/link";
-import { GitHubIcon } from "./components/icons/github-icon";
-import { MAX_WIDTH_CLASS } from "@/lib/constants";
+import { Header } from "@/components/header";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -26,7 +24,13 @@ const zenKakuGothic = Zen_Kaku_Gothic_New({
 });
 
 export const metadata: Metadata = {
-  title: "GitHub リポジトリ検索",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
+  ),
+  title: {
+    default: "GitHub リポジトリ検索",
+    template: "%s | GitHub リポジトリ検索",
+  },
   description: "GitHubのリポジトリを探索・発見できるアプリケーション",
 };
 
@@ -40,26 +44,10 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${zenKakuGothic.variable} antialiased min-h-screen bg-[#0a0a0f] text-gray-100`}
       >
-        {/* Neon glow background */}
-        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-          <div className="absolute -top-32 left-1/4 h-[500px] w-[500px] rounded-full bg-violet-600/20 blur-[120px]" />
-          <div className="absolute top-40 -right-20 h-[400px] w-[400px] rounded-full bg-cyan-500/15 blur-[100px]" />
-          <div className="absolute top-[55%] -left-20 h-[350px] w-[350px] rounded-full bg-fuchsia-500/15 blur-[100px]" />
-          <div className="absolute bottom-0 right-1/4 h-[300px] w-[300px] rounded-full bg-emerald-500/10 blur-[100px]" />
-        </div>
-        <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl">
-          <div
-            className={`mx-auto flex items-center gap-2.5 px-6 py-3.5 ${MAX_WIDTH_CLASS}`}
-          >
-            <GitHubIcon className="h-7 w-7" />
-            <Link href="/" className="text-base font-semibold tracking-tight">
-              Repo Finder
-            </Link>
-          </div>
-        </header>
-        <main className={`mx-auto px-6 py-8 ${MAX_WIDTH_CLASS}`}>
-          {children}
-        </main>
+        {/* Background gradient */}
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-[#0d0b1a] via-[#0a0a0f] to-[#0a0a0f]" />
+        <Header />
+        <main className="py-8">{children}</main>
       </body>
     </html>
   );

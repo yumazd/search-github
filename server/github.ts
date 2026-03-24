@@ -27,7 +27,10 @@ export async function searchRepositories(params: {
   url.searchParams.set("page", String(params.page || 1));
   url.searchParams.set("per_page", String(params.per_page || 30));
 
-  const res = await fetch(url.toString(), { headers: headers() });
+  const res = await fetch(url.toString(), {
+    headers: headers(),
+    next: { revalidate: 60 },
+  });
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`GitHub API error ${res.status}: ${body}`);
@@ -41,6 +44,7 @@ export async function getRepository(
 ): Promise<Repository> {
   const res = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}`, {
     headers: headers(),
+    next: { revalidate: 3600 },
   });
   if (!res.ok) throw new Error(`GitHub API error ${res.status}`);
   return res.json();
@@ -52,7 +56,10 @@ export async function getLanguages(
 ): Promise<Record<string, number>> {
   const res = await fetch(
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/languages`,
-    { headers: headers() },
+    {
+      headers: headers(),
+      next: { revalidate: 3600 },
+    },
   );
   if (!res.ok) throw new Error(`GitHub API error ${res.status}`);
   return res.json();
@@ -62,14 +69,25 @@ export async function getCommitActivity(
   owner: string,
   repo: string,
 ): Promise<number[]> {
-  const res = await fetch(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/stats/commit_activity`,
-    { headers: headers() },
-  );
-  if (!res.ok) return [];
-  const data = await res.json();
-  if (!Array.isArray(data)) return [];
-  return data.map((week: { total: number }) => week.total);
+  for (let i = 0; i < 2; i++) {
+    const res = await fetch(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/stats/commit_activity`,
+      {
+        headers: headers(),
+        cache: "no-store",
+      },
+    );
+    if (res.status === 202) {
+      // GitHub is computing stats, wait and retry
+      await new Promise((r) => setTimeout(r, 1500));
+      continue;
+    }
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((week: { total: number }) => week.total);
+  }
+  return [];
 }
 
 export async function getReadme(
@@ -83,6 +101,7 @@ export async function getReadme(
         ...headers(),
         Accept: "application/vnd.github.raw+json",
       },
+      next: { revalidate: 3600 },
     },
   );
   if (!res.ok) return "";

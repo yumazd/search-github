@@ -129,3 +129,36 @@
     @apply font-sans;
   }
 }
+
+/* README: inline images/links (sponsors, contributors, badges, heading icons) */
+.prose p:has(a img),
+.prose h1:has(a img),
+.prose h2:has(a img),
+.prose h3:has(a img) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.prose p:has(a img) {
+  justify-content: center;
+}
+
+.prose p img,
+.prose a > img,
+.prose h1 img,
+.prose h2 img,
+.prose h3 img {
+  display: inline-block;
+  margin: 0;
+}
+
+/* README: table cells with images (contributor grids) */
+.prose td:has(img) {
+  padding: 0.25rem;
+}
+
+.prose td img {
+  margin: 0;
+}

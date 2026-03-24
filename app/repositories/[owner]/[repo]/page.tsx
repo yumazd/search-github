@@ -1,33 +1,54 @@
+import { Suspense } from "react";
+import type { Metadata } from "next";
 import {
   Star,
   GitFork,
   Eye,
   CircleDot,
-  ArrowLeft,
   ExternalLink,
   Globe,
 } from "lucide-react";
 import { LANGUAGE_COLORS } from "@/lib/language-colors";
+import { MAX_WIDTH_TIGHT } from "@/lib/constants";
+import { formatCount, formatDate } from "@/lib/format";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getRepository, getLanguages } from "@/server/github";
 import { AiSummary } from "./_components/ai-summary";
 import { CommitChart } from "./_components/commit-chart";
 import { ReadmeViewer } from "./_components/readme-viewer";
+import { BackButton } from "./_components/back-button";
 
-function formatCount(count: number): string {
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}k`;
+export const revalidate = 3600;
+
+type PageParams = { owner: string; repo: string };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<PageParams>;
+}): Promise<Metadata> {
+  const { owner, repo } = await params;
+  const fullName = `${owner}/${repo}`;
+
+  try {
+    const repoData = await getRepository(owner, repo);
+    return {
+      title: fullName,
+      description:
+        repoData.description || `${fullName} の詳細情報・README・コミット活動`,
+      openGraph: {
+        title: fullName,
+        description:
+          repoData.description || `${fullName} の詳細情報`,
+        images: [repoData.owner.avatar_url],
+      },
+    };
+  } catch {
+    return {
+      title: fullName,
+    };
   }
-  return String(count);
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
 }
 
 function LanguageBar({ languages }: { languages: Record<string, number> }) {
@@ -74,58 +95,65 @@ function LanguageBar({ languages }: { languages: Record<string, number> }) {
   );
 }
 
-const GITHUB_HEADERS: Record<string, string> = {
-  Accept: "application/vnd.github+json",
-  "X-GitHub-Api-Version": "2022-11-28",
-  ...(process.env.GITHUB_TOKEN
-    ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
-    : {}),
-};
-
-async function fetchRepo(owner: string, repo: string) {
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}`,
-    { headers: GITHUB_HEADERS, next: { revalidate: 3600 } },
+function SummarySkeleton() {
+  return (
+    <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4 animate-pulse">
+      <div className="h-4 w-20 rounded bg-white/10 mb-2" />
+      <div className="space-y-2">
+        <div className="h-3 w-full rounded bg-white/10" />
+        <div className="h-3 w-3/4 rounded bg-white/10" />
+      </div>
+    </div>
   );
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub API error ${res.status}`);
-  return res.json();
 }
 
-async function fetchLanguages(owner: string, repo: string) {
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/languages`,
-    { headers: GITHUB_HEADERS, next: { revalidate: 3600 } },
+function ReadmeSkeleton() {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl animate-pulse">
+      <div className="border-b border-white/10 px-5 py-3">
+        <div className="h-4 w-48 rounded bg-white/10" />
+      </div>
+      <div className="p-5 space-y-3">
+        <div className="h-4 w-full rounded bg-white/10" />
+        <div className="h-4 w-5/6 rounded bg-white/10" />
+        <div className="h-4 w-4/6 rounded bg-white/10" />
+        <div className="h-4 w-full rounded bg-white/10" />
+        <div className="h-4 w-3/4 rounded bg-white/10" />
+      </div>
+    </div>
   );
-  if (!res.ok) return {};
-  return res.json();
 }
 
+function CommitChartSkeleton() {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 animate-pulse">
+      <div className="h-4 w-32 rounded bg-white/10 mb-4" />
+      <div className="h-24 rounded bg-white/10" />
+    </div>
+  );
+}
 
 export default async function DetailPage({
   params,
 }: {
-  params: Promise<{ owner: string; repo: string }>;
+  params: Promise<PageParams>;
 }) {
   const { owner, repo } = await params;
 
-  const [repoData, languages] = await Promise.all([
-    fetchRepo(owner, repo),
-    fetchLanguages(owner, repo),
-  ]);
-
+  let repoData;
+  try {
+    repoData = await getRepository(owner, repo);
+  } catch {
+    notFound();
+  }
   if (!repoData) notFound();
 
+  const languages = await getLanguages(owner, repo).catch(() => ({}));
+
   return (
-    <div className="space-y-8">
-      {/* Back Link */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-100"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        検索結果に戻る
-      </Link>
+    <div className={`mx-auto space-y-8 ${MAX_WIDTH_TIGHT}`}>
+      {/* Back */}
+      <BackButton />
 
       {/* Header Card */}
       <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 space-y-5">
@@ -148,12 +176,14 @@ export default async function DetailPage({
           </div>
         </div>
 
-        {/* AI Summary (Client Component) */}
-        <AiSummary
-          fullName={repoData.full_name}
-          description={repoData.description}
-          topics={repoData.topics || []}
-        />
+        {/* AI Summary (Client Component with Suspense) */}
+        <Suspense fallback={<SummarySkeleton />}>
+          <AiSummary
+            fullName={repoData.full_name}
+            description={repoData.description}
+            topics={repoData.topics || []}
+          />
+        </Suspense>
 
         {/* Stats */}
         <div className="flex flex-wrap gap-2">
@@ -241,12 +271,16 @@ export default async function DetailPage({
           <LanguageBar languages={languages} />
         </div>
 
-        {/* Commit Activity (Client Component - handles 202 retry) */}
-        <CommitChart owner={owner} repo={repo} />
+        {/* Commit Activity (Client Component with Suspense) */}
+        <Suspense fallback={<CommitChartSkeleton />}>
+          <CommitChart owner={owner} repo={repo} />
+        </Suspense>
       </div>
 
-      {/* README (Client Component - AI translation) */}
-      <ReadmeViewer owner={owner} repo={repo} />
+      {/* README (Client Component with Suspense) */}
+      <Suspense fallback={<ReadmeSkeleton />}>
+        <ReadmeViewer owner={owner} repo={repo} />
+      </Suspense>
     </div>
   );
 }
