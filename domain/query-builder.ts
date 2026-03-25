@@ -6,7 +6,10 @@ const PUSHED_MAP: Record<string, number> = {
   "1y": 365,
 };
 
-export function buildSearchQuery(filters: SearchFilters, translatedQ?: string): {
+export function buildSearchQuery(
+  filters: SearchFilters,
+  translatedQ?: string,
+): {
   q: string;
   sort?: string;
   order?: string;

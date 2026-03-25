@@ -1,12 +1,14 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import type { SearchFilters } from "@/types/search";
 import { DEFAULT_FILTERS } from "@/types/search";
-import { executeSearch, RESULTS_PER_PAGE } from "@/server/search";
+import { executeSearch } from "@/server/search";
+import { RESULTS_PER_PAGE, MAX_WIDTH_WIDE } from "@/lib/constants";
 import { SearchCard } from "@/components/search-card";
 import { RepoCard } from "./_components/repo-card";
 import { LoadMore } from "./_components/load-more";
 import { SortSelect } from "./_components/sort-select";
-import { MAX_WIDTH_WIDE } from "@/lib/constants";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 export async function generateMetadata({
   searchParams,
@@ -51,19 +53,24 @@ export default async function ResultPage({
   if (!filters.q.trim()) {
     return (
       <div className={`mx-auto space-y-15 ${MAX_WIDTH_WIDE}`}>
+        <Breadcrumb
+          items={[{ label: "トップ", href: "/" }, { label: "検索結果" }]}
+        />
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight font-display">
+          <h1 className="text-3xl font-black tracking-tight font-display">
             リポジトリを探す
           </h1>
           <p className="text-sm text-gray-200">
             日本語キーワードもAIが英語に変換して検索してくれます。
           </p>
         </div>
-        <div className="lg:grid lg:grid-cols-3 gap-20">
-          <div className="lg:col-span-1 space-y-5 lg:sticky lg:top-20 lg:self-start">
-            <SearchCard initialFilters={filters} />
+        <div className="lg:grid lg:grid-cols-5 lg:gap-10 space-y-10">
+          <div className="lg:col-span-2 space-y-5 lg:sticky lg:top-20 lg:self-start">
+            <Suspense>
+              <SearchCard initialFilters={filters} />
+            </Suspense>
           </div>
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <div className="rounded-xl border border-white/10 bg-white/5 p-10 text-center">
               <p className="text-gray-400">検索キーワードを入力してください</p>
             </div>
@@ -92,14 +99,20 @@ export default async function ResultPage({
 
   const items = result?.items ?? [];
   const totalCount = result?.total_count ?? 0;
+  const translatedQ = result?.translatedQ;
   const hasMore =
     items.length === RESULTS_PER_PAGE && totalCount > RESULTS_PER_PAGE;
 
   return (
     <div className={`mx-auto space-y-15 ${MAX_WIDTH_WIDE}`}>
+      <Breadcrumb
+        items={[{ label: "トップ", href: "/" }, { label: "検索結果" }]}
+      />
       <div className="lg:grid lg:grid-cols-5 lg:gap-10 space-y-10">
         <div className="lg:col-span-2 space-y-5 lg:sticky lg:top-20 lg:self-start">
-          <SearchCard initialFilters={filters} />
+          <Suspense>
+            <SearchCard initialFilters={filters} />
+          </Suspense>
         </div>
 
         <div className="space-y-3 lg:col-span-3">
@@ -111,11 +124,21 @@ export default async function ResultPage({
 
           {!error && (
             <>
-              <div className="flex items-center gap-5">
-                <p className="text-sm text-gray-200">
-                  {totalCount.toLocaleString()}件のリポジトリ
-                </p>
-                <SortSelect currentSort={filters.sort} />
+              <div className="flex items-center justify-between gap-5">
+                <Suspense>
+                  <SortSelect currentSort={filters.sort} />
+                </Suspense>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-5">
+                  <p className="text-sm text-gray-200">
+                    {totalCount.toLocaleString()}件のリポジトリ
+                  </p>
+                  {translatedQ && (
+                    <p className="text-xs text-gray-200">
+                      検索ワード:{" "}
+                      <span className="text-gray-300">{translatedQ}</span>
+                    </p>
+                  )}
+                </div>
               </div>
 
               {items.length === 0 && (
@@ -134,7 +157,11 @@ export default async function ResultPage({
               ))}
 
               {hasMore && (
-                <LoadMore filters={filters} initialHasMore={hasMore} />
+                <LoadMore
+                  key={JSON.stringify(filters)}
+                  filters={filters}
+                  initialHasMore={hasMore}
+                />
               )}
 
               {!hasMore && items.length > 0 && (

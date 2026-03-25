@@ -15,7 +15,14 @@ export const MOCK_REPOSITORIES = [
     watchers_count: 42300,
     open_issues_count: 28,
     license: { spdx_id: "MIT" },
-    topics: ["react", "forms", "validation", "typescript", "hooks", "form-library"],
+    topics: [
+      "react",
+      "forms",
+      "validation",
+      "typescript",
+      "hooks",
+      "form-library",
+    ],
     updated_at: "2026-03-14T10:00:00Z",
     created_at: "2019-04-01T00:00:00Z",
     html_url: "https://github.com/react-hook-form/react-hook-form",
@@ -229,11 +236,9 @@ export const MOCK_DETAIL = {
     CSS: 12000,
   },
   commitActivity: [
-    12, 15, 8, 22, 30, 28, 35, 40, 38, 25, 18, 10,
-    14, 20, 25, 32, 45, 50, 48, 42, 30, 22, 15, 8,
-    10, 18, 22, 28, 35, 42, 50, 55, 48, 40, 32, 25,
-    20, 15, 10, 12, 18, 25, 30, 38, 45, 52, 48, 40,
-    35, 28, 20, 15,
+    12, 15, 8, 22, 30, 28, 35, 40, 38, 25, 18, 10, 14, 20, 25, 32, 45, 50, 48,
+    42, 30, 22, 15, 8, 10, 18, 22, 28, 35, 42, 50, 55, 48, 40, 32, 25, 20, 15,
+    10, 12, 18, 25, 30, 38, 45, 52, 48, 40, 35, 28, 20, 15,
   ],
   readme: `# React Hook Form
 

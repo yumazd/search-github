@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { executeSearch, RESULTS_PER_PAGE } from "@/server/search";
+import { executeSearch } from "@/server/search";
+import { RESULTS_PER_PAGE } from "@/lib/constants";
 import type { SearchFilters } from "@/types/search";
 
 export async function GET(request: NextRequest) {
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
 
     if (rawMessage.includes("403")) {
       return NextResponse.json(
-        { error: "APIレート制限に達しました。しばらく待ってから再度お試しください。" },
+        {
+          error:
+            "APIレート制限に達しました。しばらく待ってから再度お試しください。",
+        },
         { status: 429 },
       );
     }

@@ -4,62 +4,39 @@
 
 | 種類 | 対象 | ツール |
 |------|------|--------|
-| 単体テスト | domain層の純ロジック | Vitest |
+| 単体テスト | domain層・lib層・server層の純ロジック | Vitest |
 | コンポーネントテスト | UIコンポーネントの描画・操作 | Vitest + React Testing Library |
-| APIモック | GitHub API / Claude APIのモック | MSW (Mock Service Worker) |
 | E2Eテスト | 検索→一覧→詳細の画面遷移 | Playwright |
 
 ---
 
-## 単体テスト（domain）
+## 単体テスト（domain / lib / server）
 
-| ファイル | テスト内容 |
-|---------|-----------|
-| `query-builder.ts` | フィルタ値 → qクエリ文字列の変換が正しいか |
-| `search-params.ts` | URLパラメータのパース・生成が正しいか |
-| `lib/date.ts` | 相対日付変換（「3日前」等） |
-| `lib/format.ts` | 数値フォーマット（1200 → 1.2k） |
+| ファイル | テスト内容 | テスト数 |
+|---------|-----------|---------|
+| `domain/query-builder.ts` | フィルタ値 → GitHub Search APIクエリ文字列の変換 | 10 |
+| `lib/format.ts` | `formatCount`（数値→k表記）、`formatRelativeDate`（相対日付）、`formatDate`（日本語ロケール） | 11 |
+| `server/search.ts` | `containsJapanese`（日本語判定：ひらがな・カタカナ・漢字・日英混在・英語のみ・空文字） | 6 |
 
 ---
 
 ## コンポーネントテスト
 
-| コンポーネント | テスト内容 |
-|--------------|-----------|
-| `search-form` | フィルタ変更でsearchParamsが更新されるか |
-| `repository-card` | 各項目が表示されるか、クリックで遷移するか |
-| `repository-list` | 0件時の空状態表示 |
-| `language-bar` | 割合が正しく表示されるか |
-| `ai-summary` | ローディング中はスケルトン、表示後に内容が出るか |
-| `readme-viewer` | マークダウンがHTMLにレンダリングされるか |
+| コンポーネント | テストファイル | テスト内容 | テスト数 |
+|--------------|--------------|-----------|---------|
+| `components/search-card.tsx` | `components/search-card.test.tsx` | フィルタ入力の反映、検索時のrouter.push、空入力バリデーション、同一条件→空入力のエラー切替、エラー解除 | 5 |
+| `app/result/_components/repo-card.tsx` | `app/result/_components/repo-card.test.tsx` | 各項目の表示（名前・Star・description・言語・ライセンス・トピック）、リンク先、null/空値の非表示 | 11 |
+| `app/result/_components/ai-description.tsx` | `app/result/_components/ai-description.test.tsx` | キャッシュなし→スケルトン表示、キャッシュあり→初回レンダリングから翻訳表示、キャッシュミス→スケルトン表示 | 3 |
 
----
+### テスト内でのスタブ対象
 
-## 異常系テスト
-
-| 異常 | テスト場所 | テスト内容 |
-|------|-----------|-----------|
-| GitHub API 422（不正クエリ） | コンポーネントテスト（`repository-list`） | エラーメッセージが表示されるか |
-| GitHub API 403（レート制限） | コンポーネントテスト（`repository-list`） | レート制限メッセージ + リセット時刻が表示されるか |
-| GitHub API 5xx | コンポーネントテスト（`repository-list`） | 接続エラーメッセージが表示されるか |
-| Claude API エラー | コンポーネントテスト（`ai-summary`, `readme-viewer`） | フォールバック（元のdescription/README）が表示されるか |
-| ネットワークエラー | E2E | オフライン時にエラー表示が出るか |
-| リポジトリ404 | コンポーネントテスト（詳細ページ） | not-found表示が出るか |
-| descriptionなし | コンポーネントテスト（`repository-card`） | 「概要なし」等が表示されるか |
-| 検索結果0件 | コンポーネントテスト（`repository-list`） | 空状態メッセージが表示されるか |
-
----
-
-## APIモック（MSW）
-
-| モック対象 | 理由 |
-|-----------|------|
-| `GET /search/repositories` | レート制限を気にせずテスト |
-| `GET /repos/{owner}/{repo}` | 固定データで安定したテスト |
-| `GET /repos/{owner}/{repo}/languages` | 同上 |
-| `GET /repos/{owner}/{repo}/readme` | 同上 |
-| `GET /repos/{owner}/{repo}/stats/commit_activity` | 同上 |
-| Claude API | AI要約・翻訳の応答を固定 |
+| スタブ | 理由 |
+|-------|------|
+| `next/navigation`（useRouter, useSearchParams） | SearchCardのルーティングをテスト |
+| `next/image`, `next/link` | DOM上で素のHTML要素として検証 |
+| `ai-description` コンポーネント | RepoCardテストでServer Actionへの依存を排除 |
+| `server-only` | server/search.tsの純関数をテスト環境で読み込むため |
+| `@/server/actions` | AiDescriptionテストでServer Actionへの依存を排除 |
 
 ---
 
@@ -68,18 +45,66 @@
 | シナリオ | 内容 |
 |---------|------|
 | 検索→一覧表示 | キーワード入力→検索→カードが表示される |
-| フィルタ適用 | 言語・Star数等を変更→結果が変わる |
-| 詳細遷移→戻る | カードクリック→詳細表示→戻る→一覧が維持されている |
-| 0件表示 | 存在しないワードで検索→空状態が出る |
-| エラー表示 | API障害時にエラーメッセージが出る |
+| フィルタ変更 | Star数・更新日を変更→結果が変わる |
+| ソート変更 | ソート切替→URLが更新され結果が変わる |
+| 無限スクロール | スクロール→追加カードが読み込まれる |
+| 空入力バリデーション | 空で検索→エラーメッセージが表示される |
+| 0件表示 | 結果なしのクエリ→空状態メッセージ |
+| クエリなしアクセス | `/result` に直接アクセス→空状態表示 |
+| 詳細遷移 | カードクリック→詳細ページにリポジトリ情報が表示される |
+| 戻るボタン | 詳細→戻る→結果一覧に戻れる |
+| 存在しないリポジトリ | 不正URL→404ページ表示 |
 
 ---
 
-## 優先度
+## テストカバレッジの現状
 
-| 優先度 | 対象 | 理由 |
-|--------|------|------|
-| 高 | domain 単体テスト | 純ロジック。壊れると全体に影響 |
-| 高 | コンポーネントテスト | 課題要件でテスト必須 |
-| 中 | E2Eテスト | あると評価上がるが工数かかる |
-| 低 | server層のテスト | MSWでモックするので間接的にカバー |
+### 実装済み
+
+| レイヤー | カバレッジ |
+|---------|-----------|
+| domain（query-builder） | ✅ フィルタ変換ロジックを網羅 |
+| lib（format） | ✅ フォーマット関数を正常系・異常系で網羅 |
+| server（search） | ✅ 日本語判定ロジックを網羅 |
+| SearchCard | ✅ 入力・検索・バリデーション・エラー切替の基本フロー |
+| RepoCard | ✅ 表示項目の正常系・null/空値の異常系 |
+| AiDescription | ✅ sessionStorageキャッシュの即時反映 |
+| E2E | ✅ 検索→一覧→詳細の主要フロー + エラー系 |
+
+### 未実装
+
+| 対象 | 内容 | 優先度 |
+|------|------|--------|
+| SortSelect | ソート切替のコンポーネントテスト | 中 |
+| LoadMore | 無限スクロール・ページネーションのテスト | 中 |
+| AiSummary | AI要約の表示・フォールバックのテスト | 低 |
+| ReadmeViewer / ReadmeContent | README表示・翻訳のテスト | 低 |
+| CommitChart | チャート描画のテスト | 低 |
+
+---
+
+## セットアップ
+
+```bash
+# 単体・コンポーネントテスト
+npx vitest --run
+
+# E2Eテスト
+npx playwright test
+
+# watchモード（開発中）
+npx vitest
+```
+
+### 設定ファイル
+
+| ファイル | 用途 |
+|---------|------|
+| `vitest.config.ts` | Vitest設定（jsdom環境、`@/` エイリアス） |
+| `vitest.setup.ts` | jest-dom拡張 + テスト間のDOM cleanup |
+| `playwright.config.ts` | Playwright設定 |
+
+### 注意事項
+
+- Node.js 22以上が必要（vitest の依存 rolldown が `node:util#styleText` を使用）
+- `vitest.setup.ts` で `afterEach(cleanup)` を呼んでいる（testing-library の自動cleanup が `globals: true` 未設定のため動作しないため）

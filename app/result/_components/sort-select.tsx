@@ -30,7 +30,7 @@ export function SortSelect({ currentSort }: { currentSort: string }) {
 
   return (
     <Select value={currentSort} onValueChange={handleChange}>
-      <SelectTrigger className="border border-gray-400 text-sm text-gray-400 hover:text-gray-200">
+      <SelectTrigger className="border border-gray-200 text-sm text-gray-200 hover:opacity-80">
         <span>{sortLabel(currentSort)}</span>
       </SelectTrigger>
       <SelectContent>

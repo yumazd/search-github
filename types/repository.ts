@@ -26,13 +26,6 @@ export interface Repository {
   homepage: string | null;
 }
 
-export interface RepositoryDetail extends Repository {
-  languages: Record<string, number>;
-  commitActivity: number[];
-  readme: string;
-  aiSummary: string;
-}
-
 export interface SearchResult {
   total_count: number;
   incomplete_results: boolean;

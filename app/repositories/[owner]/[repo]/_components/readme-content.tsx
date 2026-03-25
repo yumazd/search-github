@@ -5,20 +5,44 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Languages } from "lucide-react";
+
+// Strip non-standard HTML attributes that React doesn't recognize
+function cleanProps(props: Record<string, unknown>) {
+  const { node, vAlign, noWrap, bgColor, charOff, char, ...rest } = props;
+  return rest;
+}
+
+const markdownComponents = {
+  td: (props: Record<string, unknown>) => <td {...cleanProps(props)} />,
+  th: (props: Record<string, unknown>) => <th {...cleanProps(props)} />,
+  tr: (props: Record<string, unknown>) => <tr {...cleanProps(props)} />,
+  table: (props: Record<string, unknown>) => (
+    <table className="w-full table-fixed" {...cleanProps(props)} />
+  ),
+  img: ({ node, ...props }: Record<string, unknown>) => (
+    <img {...props} className="max-w-full h-auto" />
+  ),
+};
 import { translateReadmeAction } from "@/server/actions";
 
 export function ReadmeContent({ rawReadme }: { rawReadme: string }) {
   const [translated, setTranslated] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [error, setError] = useState(false);
 
   const handleTranslate = async () => {
     setTranslating(true);
+    setError(false);
     try {
       const result = await translateReadmeAction(rawReadme);
-      setTranslated(result);
+      if (result === rawReadme) {
+        setError(true);
+      } else {
+        setTranslated(result);
+      }
     } catch {
-      // Keep raw README on failure
+      setError(true);
     } finally {
       setTranslating(false);
     }
@@ -27,7 +51,7 @@ export function ReadmeContent({ rawReadme }: { rawReadme: string }) {
   const content = showOriginal || !translated ? rawReadme : translated;
 
   const button =
-    !translated && !translating ? (
+    !translated && !translating && !error ? (
       <button
         onClick={handleTranslate}
         className="flex items-center gap-1.5 text-sm font-bold text-black hover:opacity-80 bg-white rounded-2xl py-1 px-2 transition-colors shadow-lg hover:cursor-pointer"
@@ -35,6 +59,8 @@ export function ReadmeContent({ rawReadme }: { rawReadme: string }) {
         <Languages className="h-3.5 w-3.5" />
         AI翻訳する
       </button>
+    ) : error ? (
+      <span className="text-xs text-red-400">翻訳に失敗しました</span>
     ) : translating ? (
       <span className="text-xs text-gray-200 animate-pulse">翻訳中...</span>
     ) : translated ? (
@@ -50,7 +76,7 @@ export function ReadmeContent({ rawReadme }: { rawReadme: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl">
       <div className="flex items-center justify-between border-b border-white/10 bg-[#0a0a0f]/90 backdrop-blur-xl px-6 py-3 rounded-t-xl sticky top-14 z-10">
-        <h3 className="text-sm font-medium text-gray-300">README.md</h3>
+        <h2 className="text-sm font-medium text-gray-300">README.md</h2>
         {button}
       </div>
       <div className="px-6 py-5">
@@ -58,6 +84,7 @@ export function ReadmeContent({ rawReadme }: { rawReadme: string }) {
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
+            components={markdownComponents}
           >
             {content}
           </ReactMarkdown>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { Languages } from "lucide-react";
 import { summarizeDescriptionsAction } from "@/server/actions";
 
@@ -59,14 +59,23 @@ function requestSummary(
 
         let summaries: Record<string, string> = {};
         if (uncached.length > 0) {
-          summaries = await summarizeDescriptionsAction(
-            uncached.map((q) => ({
-              full_name: q.full_name,
-              description: q.description,
-              topics: q.topics,
-            })),
-          );
-          setCache(summaries);
+          try {
+            summaries = await Promise.race([
+              summarizeDescriptionsAction(
+                uncached.map((q) => ({
+                  full_name: q.full_name,
+                  description: q.description,
+                  topics: q.topics,
+                })),
+              ),
+              new Promise<Record<string, string>>((_, reject) =>
+                setTimeout(() => reject(new Error("timeout")), 10000),
+              ),
+            ]);
+            setCache(summaries);
+          } catch {
+            // Timeout or API error — resolve all with empty string to hide skeleton
+          }
         }
 
         const all = { ...cached, ...summaries };
@@ -89,16 +98,25 @@ export function AiDescription({
 }) {
   const [summary, setSummary] = useState<string | null>(null);
 
+  // Read cache before paint to avoid skeleton flash (runs client-only, no hydration mismatch)
+  useLayoutEffect(() => {
+    const cache = getCache();
+    if (cache[fullName]) {
+      setSummary(cache[fullName]);
+    }
+  }, [fullName]);
+
   useEffect(() => {
+    if (summary) return;
     requestSummary(fullName, description, topics).then((result) => {
-      if (result) setSummary(result);
+      setSummary(result);
     });
-  }, [fullName, description, topics]);
+  }, [fullName, description, topics, summary]);
 
   if (summary === null) {
     return (
       <div className="flex items-center gap-1.5 animate-pulse">
-        <Languages className="h-3 w-3 text-violet-400" />
+        <Languages className="h-3 w-3 text-violet-400" aria-hidden="true" />
         <div className="h-3 w-3/4 rounded bg-white/10" />
       </div>
     );
@@ -109,7 +127,10 @@ export function AiDescription({
   return (
     <div className="flex items-stretch bg-violet-500/30 rounded">
       <div className="px-2 py-1.5 bg-violet-500/50 rounded-s flex flex-nowrap shrink-0 items-center gap-2">
-        <Languages className="mt-0.5 h-3 w-3 text-violet-40" />
+        <Languages
+          className="mt-0.5 h-3 w-3 text-violet-40"
+          aria-hidden="true"
+        />
         <span className="text-sm">AI翻訳</span>
       </div>
       <p className="line-clamp-2 text-sm leading-relaxed text-white px-2 py-1">

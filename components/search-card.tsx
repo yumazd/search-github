@@ -46,6 +46,7 @@ export function SearchCard({
   const [filters, setFilters] = useState<SearchFilters>(initialFilters);
   const [searching, setSearching] = useState(false);
   const [sameQueryMessage, setSameQueryMessage] = useState(false);
+  const [emptyQueryMessage, setEmptyQueryMessage] = useState(false);
 
   // Reset spinner when navigation completes
   useEffect(() => {
@@ -53,7 +54,12 @@ export function SearchCard({
   }, [currentParams]);
 
   const handleSearch = () => {
-    if (!filters.q.trim()) return;
+    if (!filters.q.trim()) {
+      setEmptyQueryMessage(true);
+      setSameQueryMessage(false);
+      return;
+    }
+    setEmptyQueryMessage(false);
     setSameQueryMessage(false);
 
     const params = filtersToParams(filters);
@@ -73,6 +79,7 @@ export function SearchCard({
   };
 
   const updateFilter = (key: keyof SearchFilters, value: string) => {
+    if (key === "q") setEmptyQueryMessage(false);
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -83,8 +90,12 @@ export function SearchCard({
         {/* Search Input */}
         <div className="flex items-stretch gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-200" />
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-200"
+              aria-hidden="true"
+            />
             <Input
+              aria-label="検索キーワード"
               placeholder="React フォーム"
               value={filters.q}
               onChange={(e) => updateFilter("q", e.target.value)}
@@ -96,13 +107,24 @@ export function SearchCard({
             className="h-11 px-6"
             onClick={handleSearch}
             disabled={isLoading}
+            aria-label="検索"
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "検索"}
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Search className="h-4 w-4" aria-hidden="true" />
+            )}
           </Button>
         </div>
 
+        {emptyQueryMessage && (
+          <p className="text-xs text-red-500" role="alert">
+            検索キーワードを入力してください
+          </p>
+        )}
+
         {sameQueryMessage && (
-          <p className="text-xs text-red-500">
+          <p className="text-xs text-red-500" role="alert">
             検索条件が変更されていません。条件を変更して再度検索してください。
           </p>
         )}
@@ -113,7 +135,11 @@ export function SearchCard({
             <span className="text-xs font-medium uppercase tracking-wider text-gray-200">
               最低Star数
             </span>
-            <div className="flex flex-wrap gap-1.5">
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="最低Star数"
+            >
               {STAR_OPTIONS.map((option) => (
                 <Button
                   key={option.value}
@@ -132,7 +158,11 @@ export function SearchCard({
             <span className="text-xs font-medium uppercase tracking-wider text-gray-200">
               更新
             </span>
-            <div className="flex flex-wrap gap-1.5">
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="更新時期"
+            >
               {PUSHED_OPTIONS.map((option) => (
                 <Button
                   key={option.value}

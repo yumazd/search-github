@@ -7,10 +7,14 @@ function Chart({ data }: { data: number[] }) {
   const max = Math.max(...data);
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">
+      <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">
         Commit Activity (past year)
-      </h3>
-      <div className="flex items-end gap-[2px] h-24 rounded-lg bg-white/5 p-3">
+      </h2>
+      <div
+        role="img"
+        aria-label="過去1年間のコミット活動チャート"
+        className="flex items-end gap-[2px] h-24 rounded-lg bg-white/5 p-3"
+      >
         {data.map((value, i) => (
           <div
             key={i}
@@ -67,7 +71,9 @@ export function CommitChartClient({
     }
 
     retryFetch();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [initialData, owner, repo]);
 
   if (error) {

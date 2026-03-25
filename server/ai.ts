@@ -1,3 +1,4 @@
+import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 
 let client: Anthropic | null = null;
@@ -17,9 +18,9 @@ export async function translateSearchQuery(query: string): Promise<string> {
       messages: [
         {
           role: "user",
-          content: `Convert the following search query into English keywords suitable for searching GitHub repositories. Return ONLY the English keywords, nothing else. Do not add quotes or formatting.
+          content: `以下の検索クエリを英語に翻訳してください。入力の語数と同じ語数で返してください（1語なら1語、2語なら2語）。意味を膨らませたり類義語を追加しないでください。キーワードのみを返してください。
 
-Query: ${query}`,
+クエリ: ${query}`,
         },
       ],
     });

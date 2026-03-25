@@ -1,3 +1,4 @@
+import "server-only";
 import type { SearchResult, Repository } from "@/types/repository";
 
 const GITHUB_API_BASE = "https://api.github.com";
@@ -90,20 +91,14 @@ export async function getCommitActivity(
   return [];
 }
 
-export async function getReadme(
-  owner: string,
-  repo: string,
-): Promise<string> {
-  const res = await fetch(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/readme`,
-    {
-      headers: {
-        ...headers(),
-        Accept: "application/vnd.github.raw+json",
-      },
-      next: { revalidate: 3600 },
+export async function getReadme(owner: string, repo: string): Promise<string> {
+  const res = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/readme`, {
+    headers: {
+      ...headers(),
+      Accept: "application/vnd.github.raw+json",
     },
-  );
+    next: { revalidate: 3600 },
+  });
   if (!res.ok) return "";
   return res.text();
 }

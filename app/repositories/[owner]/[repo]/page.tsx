@@ -18,6 +18,7 @@ import { AiSummary } from "./_components/ai-summary";
 import { CommitChart } from "./_components/commit-chart";
 import { ReadmeViewer } from "./_components/readme-viewer";
 import { BackButton } from "./_components/back-button";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 export const revalidate = 3600;
 
@@ -39,8 +40,7 @@ export async function generateMetadata({
         repoData.description || `${fullName} の詳細情報・README・コミット活動`,
       openGraph: {
         title: fullName,
-        description:
-          repoData.description || `${fullName} の詳細情報`,
+        description: repoData.description || `${fullName} の詳細情報`,
         images: [repoData.owner.avatar_url],
       },
     };
@@ -62,10 +62,13 @@ function LanguageBar({ languages }: { languages: Record<string, number> }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">
+      <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">
         Languages
-      </h3>
-      <div className="flex h-2 overflow-hidden rounded-full bg-white/10">
+      </h2>
+      <div
+        aria-hidden="true"
+        className="flex h-2 overflow-hidden rounded-full bg-white/10"
+      >
         {entries.map(({ lang, percent }) => (
           <div
             key={lang}
@@ -81,6 +84,7 @@ function LanguageBar({ languages }: { languages: Record<string, number> }) {
         {entries.map(({ lang, percent }) => (
           <span key={lang} className="flex items-center gap-1.5">
             <span
+              aria-hidden="true"
               className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white/10"
               style={{
                 backgroundColor: LANGUAGE_COLORS[lang] || "#8b8b8b",
@@ -152,6 +156,13 @@ export default async function DetailPage({
 
   return (
     <div className={`mx-auto space-y-8 ${MAX_WIDTH_TIGHT}`}>
+      <Breadcrumb
+        items={[
+          { label: "トップ", href: "/" },
+          { label: "検索結果", back: true },
+          { label: repoData.full_name },
+        ]}
+      />
       {/* Back */}
       <BackButton />
 
@@ -161,7 +172,7 @@ export default async function DetailPage({
         <div className="flex items-center gap-3">
           <Image
             src={repoData.owner.avatar_url}
-            alt={repoData.owner.login}
+            alt={`${repoData.owner.login} のアバター`}
             width={44}
             height={44}
             className="rounded-full ring-2 ring-white/10"
@@ -188,19 +199,19 @@ export default async function DetailPage({
         {/* Stats */}
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-sm font-medium text-amber-400">
-            <Star className="h-3.5 w-3.5" />
+            <Star className="h-3.5 w-3.5" aria-hidden="true" />
             {formatCount(repoData.stargazers_count)}
           </div>
           <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1 text-sm text-gray-400">
-            <GitFork className="h-3.5 w-3.5" />
+            <GitFork className="h-3.5 w-3.5" aria-hidden="true" />
             {formatCount(repoData.forks_count)}
           </div>
           <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1 text-sm text-gray-400">
-            <Eye className="h-3.5 w-3.5" />
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
             {formatCount(repoData.watchers_count)}
           </div>
           <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1 text-sm text-gray-400">
-            <CircleDot className="h-3.5 w-3.5" />
+            <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
             {formatCount(repoData.open_issues_count)}
           </div>
         </div>
@@ -210,6 +221,7 @@ export default async function DetailPage({
           {repoData.language && (
             <span className="flex items-center gap-1.5">
               <span
+                aria-hidden="true"
                 className="inline-block h-3 w-3 rounded-full ring-1 ring-white/10"
                 style={{
                   backgroundColor:
@@ -246,9 +258,10 @@ export default async function DetailPage({
             href={repoData.html_url}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="GitHubで見る（外部サイト）"
             className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-gray-300 transition-all hover:border-violet-500/30 hover:text-gray-100"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
             GitHubで見る
           </a>
           {repoData.homepage && (
@@ -256,9 +269,10 @@ export default async function DetailPage({
               href={repoData.homepage}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Demo Site（外部サイト）"
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-gray-300 transition-all hover:border-violet-500/30 hover:text-gray-100"
             >
-              <Globe className="h-3.5 w-3.5" />
+              <Globe className="h-3.5 w-3.5" aria-hidden="true" />
               Demo Site
             </a>
           )}
