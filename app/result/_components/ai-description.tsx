@@ -133,7 +133,7 @@ export function AiDescription({
         />
         <span className="text-sm">AI翻訳</span>
       </div>
-      <p className="line-clamp-2 text-sm leading-relaxed text-white px-2 py-1">
+      <p className="line-clamp-3 text-xs leading-relaxed text-white px-2 py-1">
         {summary}
       </p>
     </div>
