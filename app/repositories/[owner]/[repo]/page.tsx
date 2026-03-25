@@ -295,6 +295,15 @@ export default async function DetailPage({
       <Suspense fallback={<ReadmeSkeleton />}>
         <ReadmeViewer owner={owner} repo={repo} />
       </Suspense>
+
+      <BackButton />
+      <Breadcrumb
+        items={[
+          { label: "トップ", href: "/" },
+          { label: "検索結果", back: true },
+          { label: repoData.full_name },
+        ]}
+      />
     </div>
   );
 }

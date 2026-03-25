@@ -27,14 +27,14 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
             {item.back ? (
               <button
                 onClick={() => router.back()}
-                className="hover:text-gray-200 transition-colors"
+                className="hover:text-gray-200 hover:cursor-pointer transition-colors"
               >
                 {item.label}
               </button>
             ) : item.href ? (
               <Link
                 href={item.href}
-                className="hover:text-gray-200 transition-colors"
+                className="hover:text-gray-200 hover:cursor-pointer transition-colors"
               >
                 {item.label}
               </Link>
