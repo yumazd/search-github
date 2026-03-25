@@ -20,7 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 const zenKakuGothic = Zen_Kaku_Gothic_New({
   variable: "--font-jp-base",
   weight: ["400", "700", "900"],
-  subsets: ["latin", "japanese"],
+  subsets: ["latin"],
 });
 
 export const viewport: Viewport = {

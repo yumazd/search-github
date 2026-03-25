@@ -7,21 +7,24 @@ import rehypeRaw from "rehype-raw";
 import { Languages } from "lucide-react";
 
 // Strip non-standard HTML attributes that React doesn't recognize
-function cleanProps(props: Record<string, unknown>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function cleanProps(props: any) {
   const { node, vAlign, noWrap, bgColor, charOff, char, ...rest } = props;
   return rest;
 }
 
-const markdownComponents = {
-  td: (props: Record<string, unknown>) => <td {...cleanProps(props)} />,
-  th: (props: Record<string, unknown>) => <th {...cleanProps(props)} />,
-  tr: (props: Record<string, unknown>) => <tr {...cleanProps(props)} />,
-  table: (props: Record<string, unknown>) => (
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const markdownComponents: Record<string, React.ComponentType<any>> = {
+  td: (props) => <td {...cleanProps(props)} />,
+  th: (props) => <th {...cleanProps(props)} />,
+  tr: (props) => <tr {...cleanProps(props)} />,
+  table: (props) => (
     <table className="w-full table-fixed" {...cleanProps(props)} />
   ),
-  img: ({ node, ...props }: Record<string, unknown>) => (
-    <img {...props} className="max-w-full h-auto" />
-  ),
+  img: (props) => {
+    const { node, ...rest } = props;
+    return <img {...rest} className="max-w-full h-auto" />;
+  },
 };
 import { translateReadmeAction } from "@/server/actions";
 
