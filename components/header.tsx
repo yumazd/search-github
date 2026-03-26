@@ -10,7 +10,7 @@ export function Header() {
       <div className={MAX_WIDTH_WIDE}>
         <Link href="/">
           <Image
-            src="/logo.webp"
+            src="/logo@0.5x.webp"
             alt="Repo Finder"
             width={1294}
             height={243}
